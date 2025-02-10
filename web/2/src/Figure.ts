@@ -49,8 +49,3 @@ export class FigureImpl implements Figure {
         this.position = position;
     }
 }
-
-// Factory function to create a new Figure
-export function createFigure(contour: Contour, position: Point, color: RGB): Figure {
-    return new FigureImpl(contour, position, color);
-}
