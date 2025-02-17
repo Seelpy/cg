@@ -111,6 +111,7 @@ type openGLCanvas struct {
 }
 
 func (c *openGLCanvas) Draw(figures []model.Figure) {
+	c.updateBuffers(figures)
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 	gl.UseProgram(c.program)
 
@@ -122,8 +123,7 @@ func (c *openGLCanvas) Draw(figures []model.Figure) {
 		position := [2]float32{float32(figure.Position().X), float32(figure.Position().Y)}
 		gl.Uniform2fv(posAttrib, 1, &position[0])
 		gl.Uniform3fv(colorAttrib, 1, &color[0])
-		vao := c.makeVao(figure.Contour())
-		gl.BindVertexArray(vao)
+		gl.BindVertexArray(c.vaos[figure])
 		gl.DrawArrays(gl.LINE_LOOP, 0, int32(len(figure.Contour())))
 	}
 

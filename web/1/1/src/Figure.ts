@@ -1,20 +1,16 @@
-// Point.ts
 export interface Point {
     x: number;
     y: number;
 }
 
-// RGB.ts
 export interface RGB {
     r: number;
     g: number;
     b: number;
 }
 
-// Contour.ts
 export type Contour = Point[];
 
-// Figure.ts
 export interface Figure {
     getContour(): Contour;
     getPosition(): Point;
