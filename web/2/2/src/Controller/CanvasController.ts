@@ -1,11 +1,11 @@
-import { ImageDocument } from "./ImageDocument.ts"
-import { ImageView } from "./ImageView.ts"
+import { ImageCanvas } from "../Model/ImageCanvas.ts"
+import { CanvasView } from "../View/CanvasView.ts"
 
-export class ImageController {
-    private model: ImageDocument;
-    private view: ImageView;
+export class CanvasController {
+    private model: ImageCanvas;
+    private view: CanvasView;
 
-    constructor(model: ImageDocument, view: ImageView) {
+    constructor(model: ImageCanvas, view: CanvasView) {
         this.model = model;
         this.view = view;
         this.setupEventListeners();

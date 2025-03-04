@@ -1,13 +1,10 @@
-import { IObservable, ImagePosition, Line, IObserver } from "./types.ts"
-
-// TODO Ластик добавить
-// TODO Рисовать на прозрачности
-export class ImageDocument implements IObservable {
+import { IObservable, ImagePosition, Line, IObserver } from "./../Common/types.ts"
+export class ImageCanvas implements IObservable {
     private readonly INIT_POSITION_X = window.innerWidth / 3 - 100;
-    private readonly INIT_POSITION_Y = window.innerHeight / 3 - 100;
+    private readonly INIT_POSITION_Y = window.innerHeight / 3 - 250;
     private readonly width: number = 0;
     private readonly height: number = 0;
-    private images: Array<ImagePosition> = [];
+    private image: ImagePosition|null = null
     private lines: Array<Line> = [];
     private isDrawing: boolean = false;
     private drawingColor: string = '#000000';
@@ -31,26 +28,24 @@ export class ImageDocument implements IObservable {
             const img = new Image();
             img.src = e.target?.result as string;
             img.onload = () => {
-                this.images.push({image: img, x: this.INIT_POSITION_X, y: this.INIT_POSITION_Y});
+                this.image = {image: img, x: this.INIT_POSITION_X, y: this.INIT_POSITION_Y};
                 this.notifyListeners();
             };
         };
         reader.readAsDataURL(file);
     }
 
-    public createNewImage(): void {
-        const canvas = document.createElement('canvas');
+    public createNewImage(canvas: HTMLCanvasElement): void {
         canvas.width = this.width;
         canvas.height = this.height;
         const ctx = canvas.getContext('2d')!;
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, this.width, this.height);
-
         const img = new Image();
-        img.src = canvas.toDataURL();
+        img.src = canvas.toDataURL()
         img.onload = () => {
             this.lines = [];
-            this.images.push({image: img, x: this.INIT_POSITION_X, y: this.INIT_POSITION_Y});
+            this.image = {image: img, x: this.INIT_POSITION_X, y: this.INIT_POSITION_Y};
             this.notifyListeners();
         };
     }
@@ -94,7 +89,7 @@ export class ImageDocument implements IObservable {
     }
 
     public isDraw(): boolean {
-        return this.isDrawing && this.images.length > 0;
+        return this.isDrawing && this.image != null;
     }
 
     public getWidth(): number {
@@ -123,7 +118,7 @@ export class ImageDocument implements IObservable {
 
     notifyListeners(): void {
         this.observers.forEach(observer =>
-            observer.update(this.images, this.lines)
+            observer.update(this.image, this.lines)
         )
     }
 }

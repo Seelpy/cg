@@ -17,7 +17,7 @@ export interface Position {
 }
 
 export interface IObserver {
-    update(images: Array<ImagePosition>, lines: Array<Line>)
+    update(images: ImagePosition|null, lines: Array<Line>): void
 }
 
 export interface IObservable {

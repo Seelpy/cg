@@ -1,18 +1,19 @@
-import { IObserver, ImagePosition, Line } from "./types.ts"
-import { ImageDocument } from "./ImageDocument.ts"
+import { IObserver, ImagePosition, Line } from "./../Common/types.ts";
+import { ImageCanvas } from "../Model/ImageCanvas.ts";
 
-export class ImageView implements IObserver {
+export class CanvasView implements IObserver {
     private readonly canvas: HTMLCanvasElement;
     private readonly height: number;
     private readonly width: number;
     private readonly ctx: CanvasRenderingContext2D;
-    private document: ImageDocument;
-    private openFileButton: HTMLButtonElement;
-    private newFileButton: HTMLButtonElement;
-    private saveButton: HTMLButtonElement;
-    private colorPickerButton: HTMLButtonElement;
+    private document: ImageCanvas;
 
-    constructor(width: number, height: number, canvas: HTMLCanvasElement, documentImage: ImageDocument) {
+    private openFileButton!: HTMLButtonElement;
+    private newFileButton!: HTMLButtonElement;
+    private saveButton!: HTMLButtonElement;
+    private colorPickerButton!: HTMLButtonElement;
+
+    constructor(width: number, height: number, canvas: HTMLCanvasElement, documentImage: ImageCanvas) {
         this.width = width;
         this.height = height;
         this.canvas = canvas;
@@ -20,9 +21,7 @@ export class ImageView implements IObserver {
         this.document = documentImage;
 
         this.initButtons();
-
         this.setupCanvas();
-
         this.render();
     }
 
@@ -41,18 +40,22 @@ export class ImageView implements IObserver {
         });
 
         this.newFileButton.addEventListener('click', () => {
-            this.document.createNewImage();
+            const canvas = document.createElement('canvas');
+            this.document.createNewImage(canvas);
         });
 
         this.saveButton.addEventListener('click', () => {
             const name = prompt('Enter name file:');
-            this.saveImage(name);
+            if (name) {
+                this.saveImage(name);
+            } else {
+                alert('File name cannot be empty.');
+            }
         });
 
         this.colorPickerButton.addEventListener('click', () => {
             const colorPicker = document.getElementById('color-picker') as HTMLInputElement;
             colorPicker.click();
-            console.log(colorPicker)
             colorPicker.addEventListener('input', () => {
                 this.document.setDrawingColor(colorPicker.value);
             });
@@ -84,7 +87,6 @@ export class ImageView implements IObserver {
 
     private render(): void {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-
         this.drawCheckerboard();
     }
 
@@ -96,11 +98,10 @@ export class ImageView implements IObserver {
         this.ctx.moveTo(line.lastPosition.x, line.lastPosition.y);
         this.ctx.lineTo(line.position.x, line.position.y);
         this.ctx.stroke();
-
     }
 
     private drawCheckerboard(): void {
-        const size = 20;
+        const size = 10;
         for (let i = 0; i < this.canvas.width; i += size) {
             for (let j = 0; j < this.canvas.height; j += size) {
                 this.ctx.fillStyle = (i + j) % (size * 2) === 0 ? '#ccc' : '#fff';
@@ -129,13 +130,15 @@ export class ImageView implements IObserver {
 
         const link = document.createElement('a');
         link.download = `${name}.png`;
-        link.href = canvas.toDataURL(`image/png}`);
+        link.href = canvas.toDataURL('image/png');
         link.click();
     }
 
-    update(images: Array<ImagePosition>, lines: Array<Line>): void {
+    update(image: ImagePosition|null, lines: Array<Line>): void {
         this.render();
-        images.forEach(img => this.ctx.drawImage(img.image, img.x, img.y));
-        lines.forEach(line => this.renderLines(line))
+        if (image !== null) {
+            this.ctx.drawImage(image.image, image.x, image.y);
+        }
+        lines.forEach(line => this.renderLines(line));
     }
 }
