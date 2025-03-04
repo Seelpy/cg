@@ -11,7 +11,7 @@ function main(): void {
         const canvasView =new CanvasView(window.innerWidth - 100, window.innerHeight - 100, canvas);
         const imageDocumentView = new ImageDocumentView(canvasView.getCanvas(), document);
         document.addObserver(imageDocumentView)
-        new ImageDocumentController(document, imageDocumentView);
+        new ImageDocumentController(document, imageDocumentView, canvasView);
     } else {
         console.error("Canvas element not found!");
     }

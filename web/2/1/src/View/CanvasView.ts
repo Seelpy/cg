@@ -29,7 +29,6 @@ export class CanvasView {
         window.addEventListener('resize', () => {
             this.canvas.width = this.width;
             this.canvas.height = this.height;
-            this.render();
         });
     }
 
