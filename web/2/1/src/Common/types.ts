@@ -5,7 +5,7 @@ export interface ImagePosition {
 }
 
 export interface IObserver {
-    update(images: Array<ImagePosition>)
+    update(images: Array<ImagePosition>): void
 }
 
 export interface IObservable {

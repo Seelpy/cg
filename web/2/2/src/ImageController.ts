@@ -16,21 +16,24 @@ export class ImageController {
             const rect = this.view.getCanvas().getBoundingClientRect();
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
-            this.model.startDrag(x, y);
+
+            if (e.button === 0) {
+                this.model.startDrawing(x, y);
+            }
         });
 
         this.view.getCanvas().addEventListener('mousemove', (e) => {
-            if (this.model.isDrag()) {
-                const rect = this.view.getCanvas().getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                this.model.drag(x, y);
+            const rect = this.view.getCanvas().getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            if (this.model.isDraw()) {
+                this.model.draw(x, y);
             }
         });
 
         this.view.getCanvas().addEventListener('mouseup', () => {
-            this.model.endDrag();
+            this.model.endDrawing();
         });
-
     }
 }

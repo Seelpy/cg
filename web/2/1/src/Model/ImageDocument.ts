@@ -1,4 +1,4 @@
-import { IObserver, ImagePosition, IObservable  } from "./types.ts"
+import {IObserver, ImagePosition, IObservable} from "./../Common/types.ts"
 
 export class ImageDocument implements IObservable {
     private images: Array<ImagePosition> = [];
