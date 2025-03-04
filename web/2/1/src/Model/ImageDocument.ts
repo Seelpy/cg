@@ -1,4 +1,4 @@
-import {IObserver, ImagePosition, IObservable} from "./../Common/types.ts"
+import {ImagePosition, IObservable, IObserver} from "./../Common/types.ts"
 
 export class ImageDocument implements IObservable {
     private images: Array<ImagePosition> = [];
@@ -7,7 +7,7 @@ export class ImageDocument implements IObservable {
     private draggedImageIndex: number | null = null;
     private observers: Array<IObserver> = [];
 
-    loadImage(file: File): void {
+    public loadImage(file: File): void {
         const reader = new FileReader();
         reader.onload = (e) => {
             const img = new Image();
@@ -20,18 +20,11 @@ export class ImageDocument implements IObservable {
         reader.readAsDataURL(file);
     }
 
-    startDrag(x: number, y: number): void {
+    public startDrag(x: number, y: number): void {
         for (let i = this.images.length - 1; i >= 0; i--) {
             const img = this.images[i];
-            const imgWidth = img.image.width;
-            const imgHeight = img.image.height;
 
-            if (
-                x >= img.x &&
-                x <= img.x + imgWidth &&
-                y >= img.y &&
-                y <= img.y + imgHeight
-            ) {
+            if (ImageDocument.inImage(img, x, y)) {
                 this.isDragging = true;
                 this.draggedImageIndex = i;
                 this.dragStart.x = x - img.x;
@@ -41,7 +34,7 @@ export class ImageDocument implements IObservable {
         }
     }
 
-    drag(x: number, y: number): void {
+    public drag(x: number, y: number): void {
         if (this.isDragging && this.draggedImageIndex !== null) {
             const img = this.images[this.draggedImageIndex];
             img.x = x - this.dragStart.x;
@@ -50,26 +43,35 @@ export class ImageDocument implements IObservable {
         }
     }
 
-    endDrag(): void {
+    public endDrag(): void {
         this.isDragging = false;
         this.draggedImageIndex = null;
     }
 
-    isDrag(): boolean {
+    public isDrag(): boolean {
         return this.isDragging;
     }
 
-    addObserver(observer: IObserver): void {
+    public addObserver(observer: IObserver): void {
         this.observers.push(observer)
     }
 
-    removeObserver(): void {
+    public removeObserver(): void {
         this.observers = []
     }
 
-    notifyListeners(): void {
+    private notifyListeners(): void {
         this.observers.forEach(observer =>
             observer.update(this.images)
         )
+    }
+
+    static inImage(image: ImagePosition, x: number, y: number): boolean {
+        const imgWidth = image.image.width;
+        const imgHeight = image.image.height;
+        return x >= image.x &&
+            x <= image.x + imgWidth &&
+            y >= image.y &&
+            y <= image.y + imgHeight
     }
 }

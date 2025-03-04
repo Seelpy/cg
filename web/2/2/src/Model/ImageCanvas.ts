@@ -58,27 +58,12 @@ export class ImageCanvas implements IObservable {
 
     public draw(x: number, y: number): void {
         if (this.isDrawing) {
-            if (x < this.INIT_POSITION_X || y < this.INIT_POSITION_Y || x > this.INIT_POSITION_X + this.width || y > this.INIT_POSITION_Y + this.height) {
-                this.lastX = x;
-                this.lastY = y;
+            if (this.isOutCanvas(x, y)) {
                 return;
             }
 
-            this.lines.push({
-                    lastPosition: {
-                        x: this.lastX,
-                        y: this.lastY,
-                    },
-                    position: {
-                        x: x,
-                        y: y,
-                    },
-                    drawingColor: this.drawingColor,
-                    brushSize: this.brushSize,
-                },
-            );
+            this.lines.push(this.makeLine(x, y));
             this.notifyListeners();
-
             this.lastX = x;
             this.lastY = y;
         }
@@ -108,17 +93,36 @@ export class ImageCanvas implements IObservable {
         return this.INIT_POSITION_Y;
     }
 
-    addObserver(observer: IObserver): void {
+    public addObserver(observer: IObserver): void {
         this.observers.push(observer)
     }
 
-    removeObserver(): void {
+    public removeObserver(): void {
         this.observers = []
     }
 
-    notifyListeners(): void {
+    private notifyListeners(): void {
         this.observers.forEach(observer =>
             observer.update(this.image, this.lines)
         )
+    }
+
+    private makeLine(x: number, y: number): Line {
+        return {
+            lastPosition: {
+                x: this.lastX,
+                y: this.lastY,
+            },
+            position: {
+                x: x,
+                y: y,
+            },
+            drawingColor: this.drawingColor,
+            brushSize: this.brushSize,
+        };
+    }
+
+    private isOutCanvas(x: number, y: number): boolean {
+        return x < this.INIT_POSITION_X || y < this.INIT_POSITION_Y || x > this.INIT_POSITION_X + this.width || y > this.INIT_POSITION_Y + this.height;
     }
 }

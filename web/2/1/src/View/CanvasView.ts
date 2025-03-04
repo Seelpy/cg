@@ -4,6 +4,10 @@ export class CanvasView {
     private readonly canvas: HTMLCanvasElement;
     private ctx: CanvasRenderingContext2D;
 
+    private readonly blackBackgroundSquareColor = '#ccc';
+    private readonly whiteBackgroundSquareColor = '#fff';
+    private readonly backgroundSquareSize = 10;
+
     constructor(width: number, height: number, canvas: HTMLCanvasElement) {
         this.width = width;
         this.height = height;
@@ -29,14 +33,15 @@ export class CanvasView {
         window.addEventListener('resize', () => {
             this.canvas.width = this.width;
             this.canvas.height = this.height;
+            this.render()
         });
     }
 
     private drawCheckerboard(): void {
-        const size = 20;
+        const size = this.backgroundSquareSize;
         for (let i = 0; i < this.canvas.width; i += size) {
             for (let j = 0; j < this.canvas.height; j += size) {
-                this.ctx.fillStyle = (i + j) % (size * 2) === 0 ? '#ccc' : '#fff';
+                this.ctx.fillStyle = (i + j) % (size * 2) === 0 ? this.whiteBackgroundSquareColor : this.blackBackgroundSquareColor ;
                 this.ctx.fillRect(i, j, size, size);
             }
         }

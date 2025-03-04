@@ -1,5 +1,5 @@
-import { IObserver, ImagePosition, Line } from "./../Common/types.ts";
-import { ImageCanvas } from "../Model/ImageCanvas.ts";
+import {ImagePosition, IObserver, Line} from "./../Common/types.ts";
+import {ImageCanvas} from "../Model/ImageCanvas.ts";
 
 export class CanvasView implements IObserver {
     private readonly canvas: HTMLCanvasElement;
@@ -12,6 +12,10 @@ export class CanvasView implements IObserver {
     private newFileButton!: HTMLButtonElement;
     private saveButton!: HTMLButtonElement;
     private colorPickerButton!: HTMLButtonElement;
+
+    private readonly blackBackgroundSquareColor = '#ccc';
+    private readonly whiteBackgroundSquareColor = '#fff';
+    private readonly backgroundSquareSize = 10;
 
     constructor(width: number, height: number, canvas: HTMLCanvasElement, documentImage: ImageCanvas) {
         this.width = width;
@@ -90,7 +94,7 @@ export class CanvasView implements IObserver {
         this.drawCheckerboard();
     }
 
-    private renderLines(line: Line): void {
+    private renderLine(line: Line): void {
         this.ctx.strokeStyle = line.drawingColor;
         this.ctx.lineWidth = line.brushSize;
         this.ctx.lineCap = 'round';
@@ -101,10 +105,10 @@ export class CanvasView implements IObserver {
     }
 
     private drawCheckerboard(): void {
-        const size = 10;
+        const size = this.backgroundSquareSize;
         for (let i = 0; i < this.canvas.width; i += size) {
             for (let j = 0; j < this.canvas.height; j += size) {
-                this.ctx.fillStyle = (i + j) % (size * 2) === 0 ? '#ccc' : '#fff';
+                this.ctx.fillStyle = (i + j) % (size * 2) === 0 ? this.whiteBackgroundSquareColor : this.blackBackgroundSquareColor;
                 this.ctx.fillRect(i, j, size, size);
             }
         }
@@ -134,11 +138,11 @@ export class CanvasView implements IObserver {
         link.click();
     }
 
-    update(image: ImagePosition|null, lines: Array<Line>): void {
+    public update(image: ImagePosition | null, lines: Array<Line>): void {
         this.render();
         if (image !== null) {
             this.ctx.drawImage(image.image, image.x, image.y);
         }
-        lines.forEach(line => this.renderLines(line));
+        lines.forEach(line => this.renderLine(line));
     }
 }
