@@ -1,3 +1,4 @@
+// TODO: change name on correct
 export interface ImagePosition {
     image: HTMLImageElement;
     x: number;
@@ -16,6 +17,7 @@ export interface Position {
     y: number;
 }
 
+// TODO: более коррестное имя
 export interface IObserver {
     update(images: ImagePosition|null, lines: Array<Line>): void
 }

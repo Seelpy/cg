@@ -1,4 +1,5 @@
 import { IObservable, ImagePosition, Line, IObserver } from "./../Common/types.ts"
+
 export class ImageCanvas implements IObservable {
     private readonly INIT_POSITION_X = window.innerWidth / 3 - 100;
     private readonly INIT_POSITION_Y = window.innerHeight / 3 - 250;
@@ -57,16 +58,16 @@ export class ImageCanvas implements IObservable {
     }
 
     public draw(x: number, y: number): void {
-        if (this.isDrawing) {
-            if (this.isOutCanvas(x, y)) {
-                return;
-            }
-
-            this.lines.push(this.makeLine(x, y));
-            this.notifyListeners();
-            this.lastX = x;
-            this.lastY = y;
+        if (!this.isDrawing) {
+            return;
         }
+        if (this.isOutCanvas(x, y)) {
+            return;
+        }
+        this.lines.push(this.makeLine(x, y));
+        this.notifyListeners();
+        this.lastX = x;
+        this.lastY = y;
     }
 
     public endDrawing(): void {

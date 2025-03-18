@@ -15,7 +15,7 @@ export class CanvasView implements IObserver {
 
     private readonly blackBackgroundSquareColor = '#ccc';
     private readonly whiteBackgroundSquareColor = '#fff';
-    private readonly backgroundSquareSize = 10;
+    private readonly backgroundSquareSize = 50;
 
     constructor(width: number, height: number, canvas: HTMLCanvasElement, documentImage: ImageCanvas) {
         this.width = width;
@@ -33,6 +33,14 @@ export class CanvasView implements IObserver {
         return this.canvas;
     }
 
+    public update(image: ImagePosition | null, lines: Array<Line>): void {
+        this.render();
+        if (image !== null) {
+            this.ctx.drawImage(image.image, image.x, image.y);
+        }
+        lines.forEach(line => this.renderLine(line));
+    }
+
     private initButtons(): void {
         this.openFileButton = document.getElementById('openFileButton') as HTMLButtonElement;
         this.newFileButton = document.getElementById('newButton') as HTMLButtonElement;
@@ -48,6 +56,7 @@ export class CanvasView implements IObserver {
             this.document.createNewImage(canvas);
         });
 
+        // TODO: поддержать прозрачность у изображения, чтобы был прозрачный
         this.saveButton.addEventListener('click', () => {
             const name = prompt('Enter name file:');
             if (name) {
@@ -136,13 +145,5 @@ export class CanvasView implements IObserver {
         link.download = `${name}.png`;
         link.href = canvas.toDataURL('image/png');
         link.click();
-    }
-
-    public update(image: ImagePosition | null, lines: Array<Line>): void {
-        this.render();
-        if (image !== null) {
-            this.ctx.drawImage(image.image, image.x, image.y);
-        }
-        lines.forEach(line => this.renderLine(line));
     }
 }

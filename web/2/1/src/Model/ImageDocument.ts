@@ -1,5 +1,6 @@
 import {ImagePosition, IObservable, IObserver} from "./../Common/types.ts"
 
+// TODO: Отделня сущность для перемещения изображений
 export class ImageDocument implements IObservable {
     private images: Array<ImagePosition> = [];
     private isDragging: boolean = false;
