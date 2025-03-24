@@ -1,6 +1,6 @@
 import {Axis} from './Axis.ts'
 import './index.css'
-import {createShaderProgram, computeOrthoMatrix} from './Utils.ts'
+import {createShaderProgram, computeOrthoMatrix} from './lib/webgl/Utils.ts'
 import {Cardioid} from "./Cardioid.ts";
 
 class App {
@@ -9,7 +9,7 @@ class App {
 	private readonly program: WebGLProgram
 	private cardioid: Cardioid
 	private axis: Axis
-	private orthoMatrix: Float32Array
+	private orthoMatrix: Float32Array<any>
 
 	constructor() {
 		this.canvas = document.createElement('canvas')

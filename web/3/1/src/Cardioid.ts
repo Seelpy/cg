@@ -17,7 +17,7 @@ export class Cardioid {
         gl.enableVertexAttribArray(positionLocation)
 
         const colorLocation = gl.getUniformLocation(this.program, 'u_color')
-        gl.uniform4f(colorLocation, 1, 1, 1, 1) // Белый цвет
+        gl.uniform4f(colorLocation, 0.3,  0.6, 0.9, 1)
 
         gl.drawArrays(gl.LINE_STRIP, 0, this.vertexCount)
     }
@@ -25,8 +25,9 @@ export class Cardioid {
     private initVertexBuffer() {
         const vertices: number[] = []
         const step = 0.01
-        const a = 1
+        const a = 3
 
+        // TODO: сделать чтобы цвета зависили от расположения
         for (let phi = 0; phi <= 2 * Math.PI; phi += step) {
             const r = a * (1 - Math.cos(phi))
             const x = r * Math.cos(phi)

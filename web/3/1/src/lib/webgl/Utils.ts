@@ -1,35 +1,4 @@
-const vertexShaderSource = `
-  attribute vec2 position;
-  uniform mat4 u_matrix;
-
-  void main() {
-    gl_Position = u_matrix * vec4(position, 0.0, 1.0);
-  }
-`
-
-const fragmentShaderSource = `
-  precision mediump float;
-  uniform vec4 u_color;
-  
-  void main() {
-    gl_FragColor = u_color;
-  }
-`
-
-const compileShader = (gl: WebGLRenderingContext, type: number, source: string): WebGLShader => {
-	const shader = gl.createShader(type)
-	if (!shader) {
-		throw new Error('Не удалось создать шейдер')
-	}
-	gl.shaderSource(shader, source)
-	gl.compileShader(shader)
-	if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-		const err = gl.getShaderInfoLog(shader)
-		gl.deleteShader(shader)
-		throw new Error('Ошибка компиляции шейдера: ' + err)
-	}
-	return shader
-}
+import {vertexShaderSource, fragmentShaderSource, compileShader} from './Shaders.ts'
 
 export const createShaderProgram = (gl: WebGLRenderingContext): WebGLProgram => {
 	const vertexShader = compileShader(gl, gl.VERTEX_SHADER, vertexShaderSource)
@@ -49,7 +18,7 @@ export const createShaderProgram = (gl: WebGLRenderingContext): WebGLProgram => 
 	return program
 }
 
-export const computeOrthoMatrix = (canvasWidth: number, canvasHeight: number): Float32Array => {
+export const computeOrthoMatrix = (canvasWidth: number, canvasHeight: number): Float32Array<ArrayBuffer> => {
 	const worldLeft = -5
 	const worldRight = 5
 	const worldBottom = -10
