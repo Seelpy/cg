@@ -26,7 +26,7 @@ class App {
 	}
 
 	render = (now: number) => {
-		now *= 0.0001
+		now *= 0.001
 		const deltaTime = now - this.then
 		this.then = now
 		this.snubCube.render(this.cubeRotation)

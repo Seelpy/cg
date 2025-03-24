@@ -1,305 +1,247 @@
-import {mat4} from "gl-matrix"
+import { mat4 } from "gl-matrix";
 
 class SnubCube {
-    private positionBuffer: WebGLBuffer | null
-    private colorBuffer: WebGLBuffer | null
-    private indexBuffer: WebGLBuffer | null
+    // WebGL буферы
+    private positionBuffer: WebGLBuffer | null;
+    private colorBuffer: WebGLBuffer | null;
+    private indexBuffer: WebGLBuffer | null;
 
-
-    private vertexPosition: number
-    private vertexColor: number
-    private projectionMatrix: WebGLUniformLocation | null
-    private modelViewMatrix: WebGLUniformLocation | null
+    // Шейдерные атрибуты и uniform-переменные
+    private vertexPosition: number;
+    private vertexColor: number;
+    private projectionMatrix: WebGLUniformLocation | null;
+    private modelViewMatrix: WebGLUniformLocation | null;
 
     constructor(
         private readonly gl: WebGLRenderingContext,
         private readonly shaderProgram: WebGLProgram,
     ) {
-        const buffers = this.initBuffers()
-        this.positionBuffer = buffers.position
-        this.colorBuffer = buffers.color
-        this.indexBuffer = buffers.indices
+        // Инициализация буферов
+        const { position, color, indices } = this.initBuffers();
+        this.positionBuffer = position;
+        this.colorBuffer = color;
+        this.indexBuffer = indices;
 
-        this.vertexPosition = gl.getAttribLocation(shaderProgram, 'aVertexPosition')
-        this.vertexColor = gl.getAttribLocation(shaderProgram, 'aVertexColor')
-        this.projectionMatrix = gl.getUniformLocation(
-            shaderProgram,
-            'uProjectionMatrix',
-        )
-        this.modelViewMatrix = gl.getUniformLocation(shaderProgram, 'uModelViewMatrix')
+        // Получение ссылок на атрибуты шейдера
+        this.vertexPosition = gl.getAttribLocation(shaderProgram, 'aVertexPosition');
+        this.vertexColor = gl.getAttribLocation(shaderProgram, 'aVertexColor');
+
+        // Получение ссылок на uniform-переменные шейдера
+        this.projectionMatrix = gl.getUniformLocation(shaderProgram, 'uProjectionMatrix');
+        this.modelViewMatrix = gl.getUniformLocation(shaderProgram, 'uModelViewMatrix');
     }
 
+    /**
+     * Рендерит курносый куб с заданным вращением
+     * @param cubeRotation Угол вращения в радианах
+     */
     render(cubeRotation: number) {
-        const gl = this.gl
-        gl.clearColor(0.0, 0.0, 0.0, 1.0) // Clear to black, fully opaque
-        gl.clearDepth(1.0) // Clear everything
-        gl.enable(gl.DEPTH_TEST) // Enable depth testing
-        gl.depthFunc(gl.LEQUAL) // Near things obscure far things
+        const { gl } = this;
 
-        // Clear the canvas before we start drawing on it.
+        // Настройка окружения рендеринга
+        this.setupRenderEnvironment();
 
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+        // Создание матрицы проекции
+        const projectionMatrix = this.createProjectionMatrix();
 
-        // Create a perspective matrix, a special matrix that is
-        // used to simulate the distortion of perspective in a camera.
-        // Our field of view is 45 degrees, with a width/height
-        // ratio that matches the display size of the canvas
-        // and we only want to see objects between 0.1 units
-        // and 100 units away from the camera.
+        // Создание и настройка матрицы модели-вида
+        const modelViewMatrix = this.createModelViewMatrix(cubeRotation);
 
-        const fieldOfView = (45 * Math.PI) / 180 // in radians
-        const aspect = gl.canvas.width / gl.canvas.height
-        const zNear = 0.1
-        const zFar = 100.0
-        const projectionMatrix = mat4.create()
+        // Настройка атрибутов вершин
+        this.setupVertexAttributes();
 
-        // note: glmatrix.js always has the first argument
-        // as the destination to receive the result.
-        mat4.perspective(projectionMatrix, fieldOfView, aspect, zNear, zFar)
+        // Установка uniform-переменных шейдера
+        this.setShaderUniforms(projectionMatrix, modelViewMatrix);
 
-        // Set the drawing position to the "identity" point, which is
-        // the center of the scene.
-        const modelViewMatrix = mat4.create()
+        // Отрисовка куба
+        this.drawCube();
+    }
 
-        // Now move the drawing position a bit to where we want to
-        // start drawing the square.
-        mat4.translate(
-            modelViewMatrix, // destination matrix
-            modelViewMatrix, // matrix to translate
-            [-0.0, 0.0, -6.0],
-        ) // amount to translate
+    // ========== Приватные методы ==========
 
-        mat4.rotate(
-            modelViewMatrix, // destination matrix
-            modelViewMatrix, // matrix to rotate
-            cubeRotation, // amount to rotate in radians
-            [0, 0, 1],
-        ) // axis to rotate around (Z)
-        mat4.rotate(
-            modelViewMatrix, // destination matrix
-            modelViewMatrix, // matrix to rotate
-            cubeRotation * 0.7, // amount to rotate in radians
-            [0, 1, 0],
-        ) // axis to rotate around (Y)
-        mat4.rotate(
-            modelViewMatrix, // destination matrix
-            modelViewMatrix, // matrix to rotate
-            cubeRotation * 0.3, // amount to rotate in radians
-            [1, 0, 0],
-        ) // axis to rotate around (X)
+    private setupRenderEnvironment() {
+        const { gl } = this;
 
-        // Tell WebGL how to pull out the positions from the position
-        // buffer into the vertexPosition attribute.
-        this.setPositionAttribute()
+        gl.clearColor(0.0, 0.0, 0.0, 1.0); // Черный фон
+        gl.clearDepth(1.0);                 // Очистка буфера глубины
+        gl.enable(gl.DEPTH_TEST);          // Включение теста глубины
+        gl.depthFunc(gl.LEQUAL);           // Ближние объекты перекрывают дальние
 
-        this.setColorAttribute()
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    }
 
-        // Tell WebGL which indices to use to index the vertices
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer)
+    private createProjectionMatrix(): mat4 {
+        const { gl } = this;
 
-        // Tell WebGL to use our program when drawing
-        gl.useProgram(this.shaderProgram)
+        const fieldOfView = (45 * Math.PI) / 180; // 45 градусов в радианах
+        const aspect = gl.canvas.width / gl.canvas.height;
+        const zNear = 0.1;
+        const zFar = 100.0;
 
-        // Set the shader uniforms
-        gl.uniformMatrix4fv(
-            this.projectionMatrix,
-            false,
-            projectionMatrix,
-        )
-        gl.uniformMatrix4fv(
-            this.modelViewMatrix,
-            false,
-            modelViewMatrix,
-        )
+        const projectionMatrix = mat4.create();
+        mat4.perspective(projectionMatrix, fieldOfView, aspect, zNear, zFar);
 
-        {
-            const vertexCount = 36
-            const type = gl.UNSIGNED_SHORT
-            const offset = 0
-            gl.drawElements(gl.TRIANGLES, vertexCount, type, offset)
+        return projectionMatrix;
+    }
+
+    private createModelViewMatrix(cubeRotation: number): mat4 {
+        const modelViewMatrix = mat4.create();
+
+        // Перемещаем куб назад, чтобы он был виден
+        mat4.translate(modelViewMatrix, modelViewMatrix, [0.0, 0.0, -6.0]);
+
+        // Вращение по всем трем осям с разными скоростями
+        mat4.rotate(modelViewMatrix, modelViewMatrix, cubeRotation, [0, 0, 1]);    // Z-ось
+        mat4.rotate(modelViewMatrix, modelViewMatrix, cubeRotation * 0.7, [0, 1, 0]); // Y-ось
+        mat4.rotate(modelViewMatrix, modelViewMatrix, cubeRotation * 0.3, [1, 0, 0]); // X-ось
+
+        return modelViewMatrix;
+    }
+
+    private setupVertexAttributes() {
+        this.setPositionAttribute();
+        this.setColorAttribute();
+
+        // Привязываем индексный буфер
+        this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
+
+        // Активируем шейдерную программу
+        this.gl.useProgram(this.shaderProgram);
+    }
+
+    private setShaderUniforms(projectionMatrix: mat4, modelViewMatrix: mat4) {
+        const { gl, projectionMatrix: projLoc, modelViewMatrix: modelLoc } = this;
+
+        if (projLoc && modelLoc) {
+            gl.uniformMatrix4fv(projLoc, false, projectionMatrix);
+            gl.uniformMatrix4fv(modelLoc, false, modelViewMatrix);
         }
+    }
+
+    private drawCube() {
+        const { gl } = this;
+
+        const vertexCount = 36; // 6 граней × 2 треугольника × 3 вершины
+        const type = gl.UNSIGNED_SHORT;
+        const offset = 0;
+
+        gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
     }
 
     private setPositionAttribute() {
-        const gl = this.gl
-        const numComponents = 3
-        const type = gl.FLOAT // the data in the buffer is 32bit floats
-        const normalize = false // don't normalize
-        const stride = 0 // how many bytes to get from one set of values to the next
-        // 0 = use type and numComponents above
-        const offset = 0 // how many bytes inside the buffer to start from
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer)
+        const { gl, vertexPosition, positionBuffer } = this;
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
         gl.vertexAttribPointer(
-            this.vertexPosition,
-            numComponents,
-            type,
-            normalize,
-            stride,
-            offset,
-        )
-        gl.enableVertexAttribArray(this.vertexPosition)
+            vertexPosition,
+            3,          // 3 компонента на вершину (x, y, z)
+            gl.FLOAT,   // Тип данных
+            false,      // Нормализация не требуется
+            0,          // Шаг
+            0          // Смещение
+        );
+        gl.enableVertexAttribArray(vertexPosition);
     }
 
-    // Tell WebGL how to pull out the colors from the color buffer
-    // into the vertexColor attribute.
     private setColorAttribute() {
-        const gl = this.gl
-        const numComponents = 4
-        const type = gl.FLOAT
-        const normalize = false
-        const stride = 0
-        const offset = 0
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer)
+        const { gl, vertexColor, colorBuffer } = this;
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
         gl.vertexAttribPointer(
-            this.vertexColor,
-            numComponents,
-            type,
-            normalize,
-            stride,
-            offset,
-        )
-        gl.enableVertexAttribArray(this.vertexColor)
+            vertexColor,
+            4,          // 4 компонента на цвет (r, g, b, a)
+            gl.FLOAT,   // Тип данных
+            false,      // Нормализация не требуется
+            0,          // Шаг
+            0           // Смещение
+        );
+        gl.enableVertexAttribArray(vertexColor);
     }
 
     private initBuffers() {
-        const positionBuffer = this.initPositionBuffer()
-        const colorBuffer = this.initColorBuffer()
-        const indexBuffer = this.initIndexBuffer()
-
         return {
-            position: positionBuffer,
-            color: colorBuffer,
-            indices: indexBuffer,
-        }
+            position: this.initPositionBuffer(),
+            color: this.initColorBuffer(),
+            indices: this.initIndexBuffer(),
+        };
     }
 
-    private initPositionBuffer() {
-        const gl = this.gl
-        // Create a buffer for the square's positions.
-        const positionBuffer = gl.createBuffer()
+    private initPositionBuffer(): WebGLBuffer {
+        const { gl } = this;
+        const buffer = gl.createBuffer()!;
 
-        // Select the positionBuffer as the one to apply buffer
-        // operations to from here out.
-        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer)
-
+        // Вершины куба (8 вершин × 3 координаты)
         const positions = [
-            // Front face
-            -1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0, 1.0, 1.0,
+            // Передняя грань
+            -1.0, -1.0,  1.0,   1.0, -1.0,  1.0,   1.0,  1.0,  1.0,  -1.0,  1.0,  1.0,
+            // Задняя грань
+            -1.0, -1.0, -1.0,  -1.0,  1.0, -1.0,   1.0,  1.0, -1.0,   1.0, -1.0, -1.0,
+            // Верхняя грань
+            -1.0,  1.0, -1.0,  -1.0,  1.0,  1.0,   1.0,  1.0,  1.0,   1.0,  1.0, -1.0,
+            // Нижняя грань
+            -1.0, -1.0, -1.0,   1.0, -1.0, -1.0,   1.0, -1.0,  1.0,  -1.0, -1.0,  1.0,
+            // Правая грань
+            1.0, -1.0, -1.0,   1.0,  1.0, -1.0,   1.0,  1.0,  1.0,   1.0, -1.0,  1.0,
+            // Левая грань
+            -1.0, -1.0, -1.0,  -1.0, -1.0,  1.0,  -1.0,  1.0,  1.0,  -1.0,  1.0, -1.0
+        ];
 
-            // Back face
-            -1.0, -1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, -1.0, -1.0,
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
 
-            // Top face
-            -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, -1.0,
-
-            // Bottom face
-            -1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, 1.0, -1.0, -1.0, 1.0,
-
-            // Right face
-            1.0, -1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0, 1.0,
-
-            // Left face
-            -1.0, -1.0, -1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, -1.0,
-        ]
-
-        // Now pass the list of positions into WebGL to build the
-        // shape. We do this by creating a Float32Array from the
-        // JavaScript array, then use it to fill the current buffer.
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW)
-
-        return positionBuffer
+        return buffer;
     }
 
-    private initColorBuffer() {
-        const gl = this.gl
+    private initColorBuffer(): WebGLBuffer {
+        const { gl } = this;
+        const buffer = gl.createBuffer()!;
 
+        // Цвета для каждой грани
         const faceColors = [
-            [1.0, 1.0, 1.0, 1.0], // Front face: white
-            [1.0, 0.0, 0.0, 1.0], // Back face: red
-            [0.0, 1.0, 0.0, 1.0], // Top face: green
-            [0.0, 0.0, 1.0, 1.0], // Bottom face: blue
-            [1.0, 1.0, 0.0, 1.0], // Right face: yellow
-            [1.0, 0.0, 1.0, 1.0], // Left face: purple
-        ]
+            [1.0, 1.0, 1.0, 1.0], // Белый - передняя
+            [1.0, 0.0, 0.0, 1.0], // Красный - задняя
+            [0.0, 1.0, 0.0, 1.0], // Зеленый - верхняя
+            [0.0, 0.0, 1.0, 1.0], // Синий - нижняя
+            [1.0, 1.0, 0.0, 1.0], // Желтый - правая
+            [1.0, 0.0, 1.0, 1.0]  // Пурпурный - левая
+        ];
 
-        // Convert the array of colors into a table for all the vertices.
+        // Создаем массив цветов для всех вершин (6 граней × 4 вершины × 4 компонента)
+        const colors = faceColors.flatMap(color =>
+            Array(4).fill(color).flat()
+        );
 
-        let colors: any[] = []
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
 
-        for (let j = 0; j < faceColors.length; ++j) {
-            const c = faceColors[j]
-            // Repeat each color four times for the four vertices of the face
-            colors = colors.concat(c, c, c, c)
-        }
-
-        const colorBuffer = gl.createBuffer()
-        gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer)
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW)
-
-        return colorBuffer
+        return buffer;
     }
 
-    private initIndexBuffer() {
-        const gl = this.gl
+    private initIndexBuffer(): WebGLBuffer {
+        const { gl } = this;
+        const buffer = gl.createBuffer()!;
 
-        const indexBuffer = gl.createBuffer()
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer)
-
-        // This array defines each face as two triangles, using the
-        // indices into the vertex array to specify each triangle's
-        // position.
-
+        // Индексы для построения треугольников (6 граней × 2 треугольника × 3 вершины)
         const indices = [
-            0,
-            1,
-            2,
-            0,
-            2,
-            3, // front
-            4,
-            5,
-            6,
-            4,
-            6,
-            7, // back
-            8,
-            9,
-            10,
-            8,
-            10,
-            11, // top
-            12,
-            13,
-            14,
-            12,
-            14,
-            15, // bottom
-            16,
-            17,
-            18,
-            16,
-            18,
-            19, // right
-            20,
-            21,
-            22,
-            20,
-            22,
-            23, // left
-        ]
+            // Передняя грань (2 треугольника)
+            0, 1, 2,   0, 2, 3,
+            // Задняя грань
+            4, 5, 6,   4, 6, 7,
+            // Верхняя грань
+            8, 9, 10,  8, 10, 11,
+            // Нижняя грань
+            12, 13, 14,  12, 14, 15,
+            // Правая грань
+            16, 17, 18,  16, 18, 19,
+            // Левая грань
+            20, 21, 22,  20, 22, 23
+        ];
 
-        // Now send the element array to GL
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffer);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
 
-        gl.bufferData(
-            gl.ELEMENT_ARRAY_BUFFER,
-            new Uint16Array(indices),
-            gl.STATIC_DRAW,
-        )
-
-        return indexBuffer
+        return buffer;
     }
 }
 
-export {
-    SnubCube,
-}
+export { SnubCube };
