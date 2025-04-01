@@ -8,9 +8,25 @@ class Maze {
     }
 
     isWall(x: number, z: number): boolean {
-        const gridX = Math.floor(x)
-        const gridZ = Math.floor(z)
-        return this.grid[gridZ]?.[gridX] === 1
+        const buffer = 0.15; // Буферное расстояние
+
+        // Проверяем 4 направления вокруг игрока
+        const positions = [
+            [x + buffer, z],       // право
+            [x - buffer, z],       // лево
+            [x, z + buffer],       // верх
+            [x, z - buffer],       // низ
+            [x + buffer, z + buffer], // диагонали
+            [x - buffer, z - buffer],
+            [x + buffer, z - buffer],
+            [x - buffer, z + buffer]
+        ];
+
+        return positions.some(([checkX, checkZ]) => {
+            const gridX = Math.floor(checkX);
+            const gridZ = Math.floor(checkZ);
+            return this.grid[gridZ]?.[gridX] === 1;
+        });
     }
 
     private getFixedMaze(): number[][] {

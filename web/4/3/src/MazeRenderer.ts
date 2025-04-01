@@ -1,9 +1,8 @@
 import {mat4, vec3} from "gl-matrix";
 import {Maze} from "./Maze.ts";
+import {Player} from "./Player.ts";
 
 class MazeRenderer {
-    private projectionMatrix
-    private viewMatrix
     private maze: Maze
 
     private cubeVertexBuffer: WebGLBuffer | null = null
@@ -13,11 +12,26 @@ class MazeRenderer {
     private readonly uMatrixLocation: WebGLUniformLocation
     private readonly uColorLocation: WebGLUniformLocation
 
-    constructor(maze: Maze) {
-        this.projectionMatrix = this.calcProjectionMatrix()
-        this.viewMatrix = this.calcViewMatrix()
+    private readonly gl: WebGLRenderingContext
+    private readonly program: WebGLProgram
+
+    private readonly canvas: HTMLCanvasElement
+
+    constructor(maze: Maze, canvas: HTMLCanvasElement, gl: WebGLRenderingContext, program: WebGLProgram) {
         this.maze = maze
+        this.gl = gl
+        this.program = program
+        this.canvas = canvas
+
+        const matrixLoc = gl.getUniformLocation(this.program, 'u_matrix')
+        const colorLoc = gl.getUniformLocation(this.program, 'u_color')
+        if (!matrixLoc || !colorLoc) throw new Error('Не удалось получить uniform-переменные')
+        this.uMatrixLocation = matrixLoc
+        this.uColorLocation = colorLoc
+
+        this.initCubeBuffers()
     }
+
     private calcProjectionMatrix() {
         const projectionMatrix = mat4.create()
         const fov = (60 * Math.PI) / 180
@@ -29,13 +43,13 @@ class MazeRenderer {
         return projectionMatrix
     }
 
-    private calcViewMatrix() {
+    private calcViewMatrix(player: Player) {
         const viewMatrix = mat4.create()
-        const eye = vec3.fromValues(this.player.position[0], this.player.position[1], this.player.position[2])
+        const eye = vec3.fromValues(player.position[0], player.position[1], player.position[2])
         const center = vec3.fromValues(
-            eye[0] + Math.cos(this.player.direction),
+            eye[0] + Math.cos(player.direction),
             eye[1],
-            eye[2] + Math.sin(this.player.direction),
+            eye[2] + Math.sin(player.direction),
         )
         const up = vec3.fromValues(0, 1, 0)
         mat4.lookAt(viewMatrix, eye, center, up)
@@ -53,15 +67,18 @@ class MazeRenderer {
         return mvpMatrix
     }
 
-    private drawMaze(playerX: number, playerZ: number) {
+    public Render(player: Player) {
+        let projectionMatrix = this.calcProjectionMatrix()
+        let viewMatrix = this.calcViewMatrix(player)
+
         const maxDistance = this.maze.size * Math.sqrt(2); // Максимальное возможное расстояние
 
         for (let z = 0; z < this.maze.size; z++) {
             for (let x = 0; x < this.maze.size; x++) {
                 if (this.maze.grid[z]![x] === 1) {
                     // Рассчитываем расстояние от игрока до стены
-                    const dx = x - playerX;
-                    const dz = z - playerZ;
+                    const dx = x - player.position[0];
+                    const dz = z - player.position[2];
                     const distance = Math.sqrt(dx*dx + dz*dz);
 
                     // Нормализуем расстояние (0 - рядом, 1 - далеко)
@@ -78,7 +95,7 @@ class MazeRenderer {
                         1.0                // A
                     ];
 
-                    const mvpMatrix = this.calcFinalMatrix(x, z, this.projectionMatrix, this.viewMatrix);
+                    const mvpMatrix = this.calcFinalMatrix(x, z, projectionMatrix, viewMatrix);
                     this.gl.uniformMatrix4fv(this.uMatrixLocation, false, mvpMatrix);
                     this.gl.uniform4fv(this.uColorLocation, color);
                     this.gl.drawElements(this.gl.TRIANGLES, this.cubeIndexCount, this.gl.UNSIGNED_SHORT, 0);
@@ -118,4 +135,8 @@ class MazeRenderer {
         gl.enableVertexAttribArray(aPositionLocation)
         gl.vertexAttribPointer(aPositionLocation, 3, gl.FLOAT, false, 0, 0)
     }
+}
+
+export {
+    MazeRenderer
 }
