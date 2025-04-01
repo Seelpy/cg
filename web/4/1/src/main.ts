@@ -1,11 +1,11 @@
-import {SnubCube} from './Rhombicosidodecahedron/SnubCube'
+import {Octahedron} from './Rhombicosidodecahedron/SnubCube'
 import {createShaderProgram} from './WebGLUtils'
 
 class App {
 	private readonly canvas: HTMLCanvasElement
 	private readonly gl: WebGLRenderingContext
 	private readonly program: WebGLProgram
-	private snubCube: SnubCube
+	private snubCube: Octahedron
 	private then = 0
 	private cubeRotation = 0
 
@@ -20,7 +20,7 @@ class App {
 		}
 		this.gl = gl
 		this.program = createShaderProgram(gl)
-		this.snubCube = new SnubCube(gl, this.program)
+		this.snubCube = new Octahedron(gl, this.program)
 
 		window.addEventListener('resize', this.resizeCanvas)
 	}

@@ -1,6 +1,6 @@
 import { mat4 } from "gl-matrix";
 
-class SnubCube {
+class Octahedron {
     // WebGL буферы
     private positionBuffer: WebGLBuffer | null;
     private colorBuffer: WebGLBuffer | null;
@@ -32,10 +32,10 @@ class SnubCube {
     }
 
     /**
-     * Рендерит курносый куб с заданным вращением
-     * @param cubeRotation Угол вращения в радианах
+     * Рендерит октаэдр с заданным вращением
+     * @param rotation Угол вращения в радианах
      */
-    render(cubeRotation: number) {
+    render(rotation: number) {
         const { gl } = this;
 
         // Настройка окружения рендеринга
@@ -45,7 +45,7 @@ class SnubCube {
         const projectionMatrix = this.createProjectionMatrix();
 
         // Создание и настройка матрицы модели-вида
-        const modelViewMatrix = this.createModelViewMatrix(cubeRotation);
+        const modelViewMatrix = this.createModelViewMatrix(rotation);
 
         // Настройка атрибутов вершин
         this.setupVertexAttributes();
@@ -53,8 +53,8 @@ class SnubCube {
         // Установка uniform-переменных шейдера
         this.setShaderUniforms(projectionMatrix, modelViewMatrix);
 
-        // Отрисовка куба
-        this.drawCube();
+        // Отрисовка октаэдра
+        this.drawOctahedron();
     }
 
     // ========== Приватные методы ==========
@@ -84,16 +84,16 @@ class SnubCube {
         return projectionMatrix;
     }
 
-    private createModelViewMatrix(cubeRotation: number): mat4 {
+    private createModelViewMatrix(rotation: number): mat4 {
         const modelViewMatrix = mat4.create();
 
-        // Перемещаем куб назад, чтобы он был виден
+        // Перемещаем октаэдр назад, чтобы он был виден
         mat4.translate(modelViewMatrix, modelViewMatrix, [0.0, 0.0, -6.0]);
 
         // Вращение по всем трем осям с разными скоростями
-        mat4.rotate(modelViewMatrix, modelViewMatrix, cubeRotation, [0, 0, 1]);    // Z-ось
-        mat4.rotate(modelViewMatrix, modelViewMatrix, cubeRotation * 0.7, [0, 1, 0]); // Y-ось
-        mat4.rotate(modelViewMatrix, modelViewMatrix, cubeRotation * 0.3, [1, 0, 0]); // X-ось
+        mat4.rotate(modelViewMatrix, modelViewMatrix, rotation, [0, 0, 1]);    // Z-ось
+        mat4.rotate(modelViewMatrix, modelViewMatrix, rotation * 0.7, [0, 1, 0]); // Y-ось
+        mat4.rotate(modelViewMatrix, modelViewMatrix, rotation * 0.3, [1, 0, 0]); // X-ось
 
         return modelViewMatrix;
     }
@@ -118,10 +118,10 @@ class SnubCube {
         }
     }
 
-    private drawCube() {
+    private drawOctahedron() {
         const { gl } = this;
 
-        const vertexCount = 36; // 6 граней × 2 треугольника × 3 вершины
+        const vertexCount = 24; // 8 граней × 3 вершины (поскольку октаэдр состоит из 8 треугольников)
         const type = gl.UNSIGNED_SHORT;
         const offset = 0;
 
@@ -170,20 +170,20 @@ class SnubCube {
         const { gl } = this;
         const buffer = gl.createBuffer()!;
 
-        // Вершины куба (8 вершин × 3 координаты)
+        // Вершины октаэдра (6 вершин × 3 координаты)
         const positions = [
-            // Передняя грань
-            -1.0, -1.0,  1.0,   1.0, -1.0,  1.0,   1.0,  1.0,  1.0,  -1.0,  1.0,  1.0,
-            // Задняя грань
-            -1.0, -1.0, -1.0,  -1.0,  1.0, -1.0,   1.0,  1.0, -1.0,   1.0, -1.0, -1.0,
-            // Верхняя грань
-            -1.0,  1.0, -1.0,  -1.0,  1.0,  1.0,   1.0,  1.0,  1.0,   1.0,  1.0, -1.0,
-            // Нижняя грань
-            -1.0, -1.0, -1.0,   1.0, -1.0, -1.0,   1.0, -1.0,  1.0,  -1.0, -1.0,  1.0,
-            // Правая грань
-            1.0, -1.0, -1.0,   1.0,  1.0, -1.0,   1.0,  1.0,  1.0,   1.0, -1.0,  1.0,
-            // Левая грань
-            -1.0, -1.0, -1.0,  -1.0, -1.0,  1.0,  -1.0,  1.0,  1.0,  -1.0,  1.0, -1.0
+            // Верхняя вершина
+            0.0, 1.0, 0.0,
+            // Нижняя вершина
+            0.0, -1.0, 0.0,
+            // Передняя вершина
+            0.0, 0.0, 1.0,
+            // Задняя вершина
+            0.0, 0.0, -1.0,
+            // Правая вершина
+            1.0, 0.0, 0.0,
+            // Левая вершина
+            -1.0, 0.0, 0.0
         ];
 
         gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
@@ -196,19 +196,19 @@ class SnubCube {
         const { gl } = this;
         const buffer = gl.createBuffer()!;
 
-        // Цвета для каждой грани
-        const faceColors = [
-            [1.0, 1.0, 1.0, 1.0], // Белый - передняя
-            [1.0, 0.0, 0.0, 1.0], // Красный - задняя
-            [0.0, 1.0, 0.0, 1.0], // Зеленый - верхняя
-            [0.0, 0.0, 1.0, 1.0], // Синий - нижняя
-            [1.0, 1.0, 0.0, 1.0], // Желтый - правая
-            [1.0, 0.0, 1.0, 1.0]  // Пурпурный - левая
+        // Цвета для каждой вершины (можно сделать разными для каждой грани)
+        const vertexColors = [
+            [1.0, 0.0, 0.0, 1.0], // Красный - верх
+            [0.0, 1.0, 0.0, 1.0], // Зеленый - низ
+            [0.0, 0.0, 1.0, 1.0], // Синий - перед
+            [1.0, 1.0, 0.0, 1.0], // Желтый - зад
+            [1.0, 0.0, 1.0, 1.0], // Пурпурный - право
+            [0.0, 1.0, 1.0, 1.0]  // Голубой - лево
         ];
 
-        // Создаем массив цветов для всех вершин (6 граней × 4 вершины × 4 компонента)
-        const colors = faceColors.flatMap(color =>
-            Array(4).fill(color).flat()
+        // Повторяем цвета для всех вершин в каждом треугольнике
+        const colors = vertexColors.flatMap(color =>
+            Array(4).fill(color).flat() // Каждая вершина участвует в 4 треугольниках
         );
 
         gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
@@ -221,20 +221,19 @@ class SnubCube {
         const { gl } = this;
         const buffer = gl.createBuffer()!;
 
-        // Индексы для построения треугольников (6 граней × 2 треугольника × 3 вершины)
+        // Индексы для построения треугольников (8 граней × 3 вершины)
         const indices = [
-            // Передняя грань (2 треугольника)
-            0, 1, 2,   0, 2, 3,
-            // Задняя грань
-            4, 5, 6,   4, 6, 7,
-            // Верхняя грань
-            8, 9, 10,  8, 10, 11,
-            // Нижняя грань
-            12, 13, 14,  12, 14, 15,
-            // Правая грань
-            16, 17, 18,  16, 18, 19,
-            // Левая грань
-            20, 21, 22,  20, 22, 23
+            // Верхняя часть (4 треугольника)
+            0, 2, 4,    // верх-перед-право
+            0, 4, 3,    // верх-право-зад
+            0, 3, 5,    // верх-зад-лево
+            0, 5, 2,    // верх-лево-перед
+
+            // Нижняя часть (4 треугольника)
+            1, 4, 2,    // низ-право-перед
+            1, 3, 4,    // низ-зад-право
+            1, 5, 3,    // низ-лево-зад
+            1, 2, 5     // низ-перед-лево
         ];
 
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffer);
@@ -244,4 +243,4 @@ class SnubCube {
     }
 }
 
-export { SnubCube };
+export { Octahedron };
