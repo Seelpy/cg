@@ -22,6 +22,8 @@ class App {
         this.canvas.width = window.innerWidth
         this.canvas.height = window.innerHeight
         const gl = this.canvas.getContext('webgl')
+        gl.enable(gl.DEPTH_TEST);
+        gl.depthFunc(gl.LEQUAL);
         if (!gl) throw new Error('WebGL не поддерживается')
         this.gl = gl
 

@@ -17,21 +17,6 @@ class BackroundRenderer {
     }
 
     public Render() {
-        this.gl.enable(this.gl.DEPTH_TEST);
-
-        // Включаем scissor test для верхней половины
-        this.gl.enable(this.gl.SCISSOR_TEST);
-        this.gl.scissor(0, this.gl.canvas.height / 2, this.gl.canvas.width, this.gl.canvas.height / 2);
-        this.gl.clearColor(0.3, 0.3, 0.3, 1);
-        this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
-
-        // Меняем scissor test для нижней половины
-        this.gl.scissor(0, 0, this.gl.canvas.width, this.gl.canvas.height / 2);
-        this.gl.clearColor(0.1, 0.1, 0.3, 1);
-        this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
-
-        // Выключаем scissor test
-        this.gl.disable(this.gl.SCISSOR_TEST);
     }
 }
 
