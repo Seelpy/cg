@@ -40,7 +40,7 @@ class MazeRenderer {
         this.uTextureLocation = textureLoc;
 
         // Загрузка текстуры
-        this.wallTexture = loadTexture(this.gl, './public/0fa2c1e795a5596021ae9caceca4851a.png', () => {
+        this.wallTexture = loadTexture(this.gl, 'f490c22e-48a8-4a33-a651-485460c3b82d.jpeg', () => {
             this.isTextureLoaded = true;
         });
 
@@ -62,9 +62,9 @@ class MazeRenderer {
 
             // Передняя грань
             0,0,1, 0,0,
-            1,0,1, 1,0,
-            1,1,1, 1,1,
-            0,1,1, 0,1
+            1,0,1, 1,1,
+            1,1,1, 0,1,
+            0,1,1, 1,0
         ]);
 
         const indices = new Uint16Array([
