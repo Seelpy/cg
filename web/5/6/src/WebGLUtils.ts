@@ -1,27 +1,40 @@
-// ==================== ШЕЙДЕРЫ ====================
+// ==================== ВЕРТЕКСНЫЙ ШАЙДЕР ====================
 const vertexShaderSource = `
     attribute vec3 a_position;
     attribute vec2 a_texcoord;
+    
     varying vec2 v_texcoord;
     uniform mat4 u_matrix;
-
+    
     void main() {
+        // Всегда добавляйте .0 к целым числам в GLSL
         gl_Position = u_matrix * vec4(a_position, 1.0);
-        v_texcoord = a_texcoord;
+        
+        // Переворачиваем текстуру по вертикали (если требуется)
+        v_texcoord = vec2(a_texcoord.x, 1.0 - a_texcoord.y);
     }
 `;
 
+// ==================== ФРАГМЕНТНЫЙ ШАЙДЕР ====================
 const fragmentShaderSource = `
-    precision mediump float;
+    precision mediump float; // Должно быть в первой строке
+    
     varying vec2 v_texcoord;
     uniform sampler2D u_texture;
     uniform vec4 u_color;
-
+    
     void main() {
-        gl_FragColor = texture2D(u_texture, v_texcoord) * u_color;
+        vec4 texColor = texture2D(u_texture, v_texcoord);
+        
+        // Комбинируем цвет текстуры с uniform цветом
+        gl_FragColor = texColor * u_color;
+        
+        // Для отладки: если альфа = 0, показываем красный
+        if(gl_FragColor.a < 0.01) {
+            gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+        }
     }
 `;
-
 // ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
 const compileShader = (gl: WebGLRenderingContext, type: number, source: string): WebGLShader => {
     const shader = gl.createShader(type);

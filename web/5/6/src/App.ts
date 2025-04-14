@@ -24,6 +24,9 @@ class App {
         const gl = this.canvas.getContext('webgl')
         gl.enable(gl.DEPTH_TEST);
         gl.depthFunc(gl.LEQUAL);
+        gl.enable(gl.CULL_FACE);
+        gl.cullFace(gl.BACK);
+        gl.frontFace(gl.CCW);
         if (!gl) throw new Error('WebGL не поддерживается')
         this.gl = gl
 
