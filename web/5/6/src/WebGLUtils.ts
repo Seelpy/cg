@@ -1,4 +1,3 @@
-// ==================== ВЕРТЕКСНЫЙ ШАЙДЕР ====================
 const vertexShaderSource = `
     attribute vec3 a_position;
     attribute vec2 a_texcoord;
@@ -7,17 +6,15 @@ const vertexShaderSource = `
     uniform mat4 u_matrix;
     
     void main() {
-        // Всегда добавляйте .0 к целым числам в GLSL
         gl_Position = u_matrix * vec4(a_position, 1.0);
         
-        // Переворачиваем текстуру по вертикали (если требуется)
         v_texcoord = vec2(a_texcoord.x, 1.0 - a_texcoord.y);
     }
 `;
 
-// ==================== ФРАГМЕНТНЫЙ ШАЙДЕР ====================
+// TODO: для чего нужен gl_flagColor
 const fragmentShaderSource = `
-    precision mediump float; // Должно быть в первой строке
+    precision mediump float;
     
     varying vec2 v_texcoord;
     uniform sampler2D u_texture;
@@ -26,16 +23,14 @@ const fragmentShaderSource = `
     void main() {
         vec4 texColor = texture2D(u_texture, v_texcoord);
         
-        // Комбинируем цвет текстуры с uniform цветом
         gl_FragColor = texColor * u_color;
         
-        // Для отладки: если альфа = 0, показываем красный
         if(gl_FragColor.a < 0.01) {
             gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
         }
     }
 `;
-// ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
+
 const compileShader = (gl: WebGLRenderingContext, type: number, source: string): WebGLShader => {
     const shader = gl.createShader(type);
     if (!shader) throw new Error('Не удалось создать шейдер');
@@ -52,9 +47,6 @@ const compileShader = (gl: WebGLRenderingContext, type: number, source: string):
     return shader;
 };
 
-const isPowerOf2 = (value: number): boolean => (value & (value - 1)) === 0;
-
-// ==================== ОСНОВНЫЕ ФУНКЦИИ ====================
 export const createShaderProgram = (gl: WebGLRenderingContext): WebGLProgram => {
     // Компиляция шейдеров
     const vertexShader = compileShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
@@ -73,7 +65,6 @@ export const createShaderProgram = (gl: WebGLRenderingContext): WebGLProgram => 
         throw new Error('Ошибка линковки программы: ' + err);
     }
 
-    // Инициализация атрибутов и униформ
     gl.useProgram(program);
 
     program.a_position = gl.getAttribLocation(program, "a_position");
@@ -85,6 +76,7 @@ export const createShaderProgram = (gl: WebGLRenderingContext): WebGLProgram => 
     return program;
 };
 
+// TODO: освещение
 export const loadTexture = (
     gl: WebGLRenderingContext,
     url: string,
@@ -95,28 +87,20 @@ export const loadTexture = (
 
     const image = new Image();
     image.crossOrigin = "anonymous";
-
+    // TODO: фильтрация текстур чтобы использовались анизотропная фильтрация и мипмепы
     image.onload = () => {
         gl.bindTexture(gl.TEXTURE_2D, texture);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
 
-        if (isPowerOf2(image.width) && isPowerOf2(image.height)) {
-            gl.generateMipmap(gl.TEXTURE_2D);
-        } else {
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-        }
+        // TODO: для чего
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        // TODO: поменять фильтр
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
 
         callback(texture);
     };
 
     image.src = url;
     return texture;
-};
-
-// ==================== ЭКСПОРТ ====================
-export default {
-    createShaderProgram,
-    loadTexture
 };

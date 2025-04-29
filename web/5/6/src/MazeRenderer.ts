@@ -1,7 +1,8 @@
 import {mat4, vec3} from "gl-matrix";
-import {Maze} from "./Maze.ts";
+import {Maze, MazeElementType} from "./Maze.ts";
 import {Player} from "./Player.ts";
 import {loadTexture} from "./WebGLUtils.ts";
+import {initTextureMap} from "./MazeTexture.ts";
 
 class MazeRenderer {
     private maze: Maze;
@@ -19,6 +20,7 @@ class MazeRenderer {
     private readonly canvas: HTMLCanvasElement;
 
     private wallTexture: WebGLTexture;
+    private typeToWallTextureMap: Map<number, WebGLTexture>;
     private isTextureLoaded = false;
 
     constructor(maze: Maze, canvas: HTMLCanvasElement, gl: WebGLRenderingContext, program: WebGLProgram) {
@@ -39,10 +41,10 @@ class MazeRenderer {
         this.uColorLocation = colorLoc;
         this.uTextureLocation = textureLoc;
 
-        // Загрузка текстуры
         this.wallTexture = loadTexture(this.gl, '1.jpg', () => {
             this.isTextureLoaded = true;
         });
+        this.typeToWallTextureMap = initTextureMap(this.gl)
 
         this.initCubeBuffers();
     }
@@ -53,48 +55,29 @@ class MazeRenderer {
 
         // Вершины куба с текстурными координатами
         const vertices = new Float32Array([
-            // Передняя грань (Z = 0)
             0, 0, 0, 0, 0,
             1, 0, 0, 1, 0,
             1, 1, 0, 1, 1,
             0, 1, 0, 0, 1,
 
-            // Задняя грань (Z = 1)
             0, 0, 1, 1, 0,
             1, 0, 1, 0, 0,
             1, 1, 1, 0, 1,
             0, 1, 1, 1, 1,
 
-            // Левая грань (X = 0)
-            0, 0, 0, 0, 0,
-            0, 0, 1, 1, 0,
-            0, 1, 1, 1, 1,
-            0, 1, 0, 0, 1,
-
-            // Правая грань (X = 1)
-            1, 0, 0, 1, 0,
-            1, 0, 1, 0, 0,
-            1, 1, 1, 0, 1,
-            1, 1, 0, 1, 1,
         ]);
 
         const indices = new Uint16Array([
-            // Передняя грань (корректная)
             4,5,6, 4,6,7,
 
-            // Задняя грань (корректная)
             0,2,1, 0,3,2,
 
-            // Левая грань (исправлено направление)
             0,4,7, 0,7,3,
 
-            // Правая грань (корректная)
             1,6,5, 1,2,6,
 
-            // Верхняя грань (исправлено направление)
             3,7,6, 3,6,2,
 
-            // Нижняя грань (исправлено направление)
             0,5,4, 0,1,5
         ]);
 
@@ -106,22 +89,18 @@ class MazeRenderer {
         gl.bindBuffer(gl.ARRAY_BUFFER, this.cubeVertexBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
 
-        // Создаем и заполняем индексный буфер
         this.cubeIndexBuffer = gl.createBuffer()!;
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.cubeIndexBuffer);
         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
 
-        // Настройка атрибутов
         const positionLocation = gl.getAttribLocation(this.program, 'a_position');
         const texcoordLocation = gl.getAttribLocation(this.program, 'a_texcoord');
 
         gl.enableVertexAttribArray(positionLocation);
         gl.enableVertexAttribArray(texcoordLocation);
 
-        // Шаг в байтах между вершинами (5 значений * 4 байта)
         const stride = 5 * Float32Array.BYTES_PER_ELEMENT;
 
-        // Настройка атрибута позиций
         gl.bindBuffer(gl.ARRAY_BUFFER, this.cubeVertexBuffer);
         gl.vertexAttribPointer(
             positionLocation,
@@ -132,7 +111,6 @@ class MazeRenderer {
             0
         );
 
-        // Настройка атрибута текстурных координат
         gl.vertexAttribPointer(
             texcoordLocation,
             2,
@@ -143,6 +121,7 @@ class MazeRenderer {
         );
     }
 
+    // TODO: поправить наименование
     public Render(player: Player) {
         if (!this.isTextureLoaded) return;
 
@@ -152,23 +131,20 @@ class MazeRenderer {
 
         gl.useProgram(this.program);
 
-        // Привязка текстуры
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, this.wallTexture);
-        gl.uniform1i(this.uTextureLocation, 0);
-
-        // Привязка индексного буфера
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.cubeIndexBuffer);
 
         for (let z = 0; z < this.maze.size; z++) {
             for (let x = 0; x < this.maze.size; x++) {
-                if (this.maze.grid[z]![x] === 1) {
+                if (this.maze.grid[z]![x] !== MazeElementType.EMPTY) {
+                    gl.activeTexture(gl.TEXTURE0);
+                    gl.bindTexture(gl.TEXTURE_2D, this.typeToWallTextureMap[this.maze.grid[z][x]]);
+                    gl.uniform1i(this.uTextureLocation, 0);
                     const dx = x - player.position[0];
                     const dz = z - player.position[2];
                     const distance = Math.sqrt(dx*dx + dz*dz);
                     const maxDistance = this.maze.size * Math.sqrt(2);
                     const normalizedDistance = Math.min(distance / maxDistance, 1);
-                    const darkenFactor = 1.0 - Math.pow(normalizedDistance, 0.3);
+                    const darkenFactor = 1.0 - Math.pow(normalizedDistance, 0.4);
 
                     const color = [1.0, 1.0, 1.0, darkenFactor];
                     const mvpMatrix = this.calcFinalMatrix(x, z, projectionMatrix, viewMatrix);
