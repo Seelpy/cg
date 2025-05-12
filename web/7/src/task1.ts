@@ -1,19 +1,20 @@
+import {Base} from "./Base.ts";
+
 const vertexShaderSource = `
 attribute float position;
 uniform vec2 u_resolution;
 
 float CalcR(float x) {
-    return (1. + sin(x)) * (1. + .9 * cos(12.*x)) * (1. + .1 * cos(20. * x)) * (.5 + .05 * cos(200. * x));
+    return (1.0 + sin(x)) * (1.0 + 0.9 * cos(12.0*x)) * (1.0 + 0.1 * cos(20.0 * x)) * (0.5 + 0.05 * cos(500.0 * x));
 }
 
 void main() {
-    float x = position;
-    float R = CalcR(x);
+    float p = position;
+    float R = CalcR(p);
     
-    // Вычисляем позицию в координатах от -1 до 1
     vec2 pos;
-    pos.x = R * cos(x)*0.5;
-    pos.y = R * sin(x)*0.65;
+    pos.x = R * cos(p)*0.5;
+    pos.y = R * sin(p)*0.65;
     
     pos.y -= 0.5;
     
@@ -25,73 +26,32 @@ const fragmentShaderSource = `
 precision highp float;
 
 void main() {
-    gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0); // Белый цвет
+    gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);
 }
 `;
 
-class CurvedLineApp {
+class App extends Base {
     private readonly canvas: HTMLCanvasElement;
-    private gl: WebGLRenderingContext;
-    private program: WebGLProgram;
     private positionBuffer: WebGLBuffer;
     private positions: Float32Array<any>;
-    private resolutionUniformLocation: WebGLUniformLocation | null;
 
     constructor() {
+        super();
         this.canvas = document.createElement('canvas');
         document.body.appendChild(this.canvas);
         this.canvas.width = window.innerWidth;
         this.canvas.height = window.innerHeight;
-        let gl: WebGLRenderingContext | null = this.canvas.getContext('webgl');
-        if (!gl) {
-            throw new Error('WebGL not supported');
-        }
-        this.gl = gl;
-
+        this.gl = this.canvas.getContext('webgl');
         this.initialize();
         this.render();
     }
 
     private initialize() {
-        this.setupShaders();
-        this.setupGeometry();
-        this.resize();
+        this.setupShaders(vertexShaderSource, fragmentShaderSource);
+        this.setup();
     }
 
-    private setupShaders() {
-        const vertexShader = this.compileShader(this.gl.VERTEX_SHADER, vertexShaderSource);
-        const fragmentShader = this.compileShader(this.gl.FRAGMENT_SHADER, fragmentShaderSource);
-
-        this.program = this.gl.createProgram()!;
-        this.gl.attachShader(this.program, vertexShader);
-        this.gl.attachShader(this.program, fragmentShader);
-        this.gl.linkProgram(this.program);
-
-        if (!this.gl.getProgramParameter(this.program, this.gl.LINK_STATUS)) {
-            console.error('Program linking error:', this.gl.getProgramInfoLog(this.program));
-        }
-
-        this.resolutionUniformLocation = this.gl.getUniformLocation(this.program, 'u_resolution');
-
-        this.gl.deleteShader(vertexShader);
-        this.gl.deleteShader(fragmentShader);
-    }
-
-    private compileShader(type: number, source: string): WebGLShader {
-        const shader = this.gl.createShader(type)!;
-        this.gl.shaderSource(shader, source);
-        this.gl.compileShader(shader);
-
-        if (!this.gl.getShaderParameter(shader, this.gl.COMPILE_STATUS)) {
-            console.error('Shader compilation error:', this.gl.getShaderInfoLog(shader));
-            this.gl.deleteShader(shader);
-            throw new Error('Shader compilation failed');
-        }
-
-        return shader;
-    }
-
-    private setupGeometry() {
+    private setup() {
         const pointCount = 1000;
         this.positions = new Float32Array(pointCount);
         for (let i = 0; i < pointCount; i++) {
@@ -118,18 +78,8 @@ class CurvedLineApp {
 
         requestAnimationFrame(() => this.render());
     }
-
-    public resize() {
-        this.canvas.width = window.innerWidth
-        this.canvas.height = window.innerHeight
-        this.gl.viewport(0, 0, window.innerWidth, window.innerHeight)
-    }
 }
 
 window.addEventListener('load', () => {
-    const app = new CurvedLineApp();
-
-    window.addEventListener('resize', () => {
-        app.resize();
-    });
+    const app = new App();
 });

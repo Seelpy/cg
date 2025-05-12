@@ -1,4 +1,6 @@
-const VERTEX_SHADER = `#version 300 es
+import {Base} from "./Base.ts";
+
+const vertexShaderSource = `#version 300 es
 precision highp float;
 
 in vec2 position;
@@ -14,7 +16,7 @@ void main() {
 }
 `;
 
-const FRAGMENT_SHADER = `#version 300 es
+const fragmentShaderSource = `#version 300 es
 precision highp float;
 out vec4 color;
 
@@ -23,7 +25,7 @@ void main() {
 }
 `;
 
-class MorphingApp {
+class App extends Base {
     private canvas: HTMLCanvasElement;
     private gl: WebGL2RenderingContext;
     private program: WebGLProgram;
@@ -32,44 +34,57 @@ class MorphingApp {
     private projectionViewLocation: WebGLUniformLocation;
     private progress: number = 0;
     private direction: number = 1;
-    private rotationY: number = 45;
+    private rotationX: number = 0;
+    private rotationY: number = 30;
+    private isMouseDown: boolean = false;
+    private lastMouseX: number = 0;
+    private lastMouseY: number = 0;
 
     constructor() {
+        super()
         this.canvas = document.createElement('canvas');
         document.body.appendChild(this.canvas);
-        this.canvas.width = 800;
-        this.canvas.height = 600;
+        this.canvas.width = 1600;
+        this.canvas.height = 900;
 
         this.gl = this.canvas.getContext('webgl2')!;
-        this.initShaders();
+        this.setupShaders(vertexShaderSource, fragmentShaderSource);
+
+        this.progressLocation = this.gl.getUniformLocation(this.program, 'progress');
+        this.projectionViewLocation = this.gl.getUniformLocation(this.program, 'projection_view');
+
+        this.canvas.addEventListener('mousedown', this.onMouseDown.bind(this));
+        this.canvas.addEventListener('mousemove', this.onMouseMove.bind(this));
+        this.canvas.addEventListener('mouseup', this.onMouseUp.bind(this));
+
         this.initGeometry();
         this.initMatrices();
         this.animate();
-        this.resize();
     }
 
-    private initShaders() {
-        const vs = this.compileShader(this.gl.VERTEX_SHADER, VERTEX_SHADER);
-        const fs = this.compileShader(this.gl.FRAGMENT_SHADER, FRAGMENT_SHADER);
-
-        this.program = this.gl.createProgram()!;
-        this.gl.attachShader(this.program, vs);
-        this.gl.attachShader(this.program, fs);
-        this.gl.linkProgram(this.program);
-
-        this.progressLocation = this.gl.getUniformLocation(this.program, 'progress')!;
-        this.projectionViewLocation = this.gl.getUniformLocation(this.program, 'projection_view')!;
+    private onMouseDown(e: MouseEvent) {
+        this.isMouseDown = true;
+        this.lastMouseX = e.clientX;
+        this.lastMouseY = e.clientY;
     }
 
-    private compileShader(type: number, source: string): WebGLShader {
-        const shader = this.gl.createShader(type)!;
-        this.gl.shaderSource(shader, source);
-        this.gl.compileShader(shader);
+    private onMouseUp() {
+        this.isMouseDown = false;
+    }
 
-        if (!this.gl.getShaderParameter(shader, this.gl.COMPILE_STATUS)) {
-            throw new Error(this.gl.getShaderInfoLog(shader)!);
-        }
-        return shader;
+    private onMouseMove(e: MouseEvent) {
+        if (!this.isMouseDown) return;
+
+        const deltaX = e.clientX - this.lastMouseX;
+        const deltaY = e.clientY - this.lastMouseY;
+
+        this.rotationY += deltaX * 0.5;
+        this.rotationX = Math.min(89, Math.max(-89, this.rotationX + deltaY * 0.5));
+
+        this.lastMouseX = e.clientX;
+        this.lastMouseY = e.clientY;
+
+        this.updateViewMatrix();
     }
 
     private initGeometry() {
@@ -97,9 +112,31 @@ class MorphingApp {
         this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(vertices), this.gl.STATIC_DRAW);
     }
 
+    private updateViewMatrix() {
+        const view = this.translate(0, 0, -5.5)
+            .multiply(this.rotateY(this.rotationY))
+            .multiply(this.rotateX(this.rotationX));
+
+        const projection = this.ortho(
+            -2, 2,
+            -2 * this.canvas.height/this.canvas.width,
+            2 * this.canvas.height/this.canvas.width,
+            0.1, 10
+        );
+
+        const pv = projection.multiply(view);
+        this.gl.useProgram(this.program);
+        this.gl.uniformMatrix4fv(this.projectionViewLocation, false, pv.data);
+    }
+
     private initMatrices() {
-        const view = this.translate(0, 0, -3.5).multiply(this.rotateY(this.rotationY));
-        const projection = this.perspective(45, this.canvas.width/this.canvas.height, 0.1, 100);
+        const view = this.translate(0, 0, -5.5).multiply(this.rotateY(30));
+        const projection = this.ortho(
+            -2, 2,
+            -2 * this.canvas.height/this.canvas.width,
+            2 * this.canvas.height/this.canvas.width,
+            0.1, 10
+        );
         const pv = projection.multiply(view);
 
         this.gl.useProgram(this.program);
@@ -132,13 +169,18 @@ class MorphingApp {
         this.gl.drawArrays(this.gl.LINES, 0, 39600);
     }
 
-    private perspective(fov: number, aspect: number, near: number, far: number): Matrix4 {
-        const f = 1 / Math.tan(fov * Math.PI / 360);
+    // TODO: матрица перспективного проецирования
+    private ortho(left: number, right: number, bottom: number,
+                  top: number, near: number, far: number): Matrix4 {
+        const tx = -(right + left) / (right - left);
+        const ty = -(top + bottom) / (top - bottom);
+        const tz = -(far + near) / (far - near);
+
         return new Matrix4([
-            f/aspect, 0, 0, 0,
-            0, f, 0, 0,
-            0, 0, (far+near)/(near-far), (2*far*near)/(near-far),
-            0, 0, -1, 0
+            2/(right-left), 0, 0, tx,
+            0, 2/(top-bottom), 0, ty,
+            0, 0, -2/(far-near), tz,
+            0, 0, 0, 1
         ]);
     }
 
@@ -153,6 +195,17 @@ class MorphingApp {
         ]);
     }
 
+    private rotateX(deg: number): Matrix4 {
+        const rad = deg * Math.PI / 180;
+        const c = Math.cos(rad), s = Math.sin(rad);
+        return new Matrix4([
+            1, 0, 0, 0,
+            0, c, s, 0,
+            0, -s, c, 0,
+            0, 0, 0, 1
+        ]);
+    }
+
     private translate(x: number, y: number, z: number): Matrix4 {
         return new Matrix4([
             1, 0, 0, x,
@@ -160,12 +213,6 @@ class MorphingApp {
             0, 0, 1, z,
             0, 0, 0, 1
         ]);
-    }
-
-    public resize() {
-        this.canvas.width = window.innerWidth
-        this.canvas.height = window.innerHeight
-        this.gl.viewport(0, 0, window.innerWidth, window.innerHeight)
     }
 }
 
@@ -193,9 +240,5 @@ class Matrix4 {
 }
 
 window.addEventListener('load', () => {
-    const app = new MorphingApp();
-
-    window.addEventListener('resize', () => {
-        app.resize();
-    });
+    const app = new App();
 });
